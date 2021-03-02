@@ -49,7 +49,8 @@ if base:
     with Timer("Repo load"):
         #base.read_all_repos()
         #base.fill_sack(load_system_repo=True, load_available_repos=True)
-        base.doConfigSetup()
+
+        base.doGenericSetup(cache=1)
         base.doRepoSetup()
         base.doSackSetup()
     if DEBUG:
