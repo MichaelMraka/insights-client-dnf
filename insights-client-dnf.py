@@ -43,6 +43,7 @@ def sorted_pkgs(pkgs):
 #-------- main ------------
 with dnf.base.Base() as base:
     with Timer("Repo load"):
+        base.conf.read()
         base.read_all_repos()
         base.fill_sack(load_system_repo=True, load_available_repos=True)
     if DEBUG:
