@@ -79,6 +79,10 @@ with dnf.base.Base() as base:
                         if update_list:
                             out_list = []
                             for pkg in sorted_pkgs(update_list):
+                                if pkg.reponame == "@System":
+                                    # if package is installed more than once (e.g. kernel)
+                                    # don't report other installed versions as updates
+                                    continue
                                 pkg_dict = {
                                     "package": "{}-{}:{}-{}.{}".format(pkg.name, pkg.epoch, pkg.version,
                                                                     pkg.release, pkg.arch),
