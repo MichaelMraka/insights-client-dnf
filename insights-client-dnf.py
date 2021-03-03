@@ -1,12 +1,8 @@
-#!/usr/libexec/platform-python
 
 import time
 import json
 import resource
 
-import dnf
-import hawkey
-import rpm
 from functools import cmp_to_key
 
 DEBUG=False
@@ -95,15 +91,88 @@ class DnfManager:
         errata = pkg.get_advisories(hawkey.EQ)
         return errata[0].id
 
+class YumManager:
+    def __init__(self):
+        self.base = yum.YumBase()
+        self.base.doGenericSetup(cache=1)
+        self.releasever = self.base.conf.yumvar['releasever']
+        self.basearch = self.base.conf.yumvar['basearch']
+        self.packages = []
+        self.repos = []
 
-UpdatesManager = DnfManager
-#-------- main ------------
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
+    @staticmethod
+    def pkg_cmp(a, b):
+        vercmp = a.verCMP(b)
+        if vercmp != 0:
+            return vercmp
+        if a.repoid != b.repoid:
+            return -1 if a.repoid < b.repoid else 1
+        return 0
+
+    def sorted_pkgs(self, pkgs):
+        return sorted(pkgs, key=cmp_to_key(self.pkg_cmp))
+
+    def load(self):
+        self.base.doRepoSetup()
+        self.base.doSackSetup()
+        self.packages = self.base.pkgSack.returnPackages()
+        self.repos = self.base.repos.repos
+
+    def enabled_repos(self):
+        return [repo.id for repo in self.base.repos.listEnabled()]
+
+    def installed_packages(self):
+        return self.base.rpmdb.returnPackages()
+
+    def updates(self, pkg):
+        nevra = pkg.nevra
+        updates_list = []
+        for upg in self.base.pkgSack.returnPackages(patterns=[pkg.na]):
+            if upg.verGT(pkg):
+                updates_list.append(upg)
+        return nevra, updates_list
+
+    @staticmethod
+    def pkg_nevra(pkg):
+        return "{}-{}:{}-{}.{}".format(pkg.name, pkg.epoch, pkg.version,
+                                       pkg.release, pkg.arch)
+
+    @staticmethod
+    def pkg_repo(pkg):
+        return pkg.repoid
+
+    def advisory(self, pkg):
+        adv = self.base.upinfo.get_notice(pkg.nvr)
+        if adv:
+            return adv.get_metadata()['update_id']
+        return None
+
+
+#------- main ------------
+try:
+    # dnf based system
+    import dnf
+    import hawkey
+    import rpm
+    UpdatesManager = DnfManager
+except ImportError:
+    # yum based system
+    import yum
+    from yum import updateinfo
+    UpdatesManager = YumManager
+
 with UpdatesManager() as umgr:
     with Timer("Repo load"):
         umgr.load()
     if DEBUG:
-        print("Loaded repos:", len(umgr.repos))
-        print("Loaded packages:", len(umgr.packages))
+        print("Loaded repos: %d" % len(umgr.repos))
+        print("Loaded packages: %d " % len(umgr.packages))
         print("Memory usage: %s MB" % (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024))
 
     with Timer("Complete request(sum of above)"):

@@ -1,0 +1,7 @@
+How to run script on RHEL8:
+
+  /usr/libexec/platform-python ./insights-client-dnf.py
+
+on RHEL7:
+
+  /usr/bin/python ./insights-client-dnf.py

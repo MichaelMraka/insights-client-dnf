@@ -1,4 +1,1 @@
-* cacheonly mode - make sure it works completely from cache and does not download any external metadata
-* unify scripts - both have very similar workflow
-                - extract dnf/yum specific parts into object and call which one is available
 * report cache age?
