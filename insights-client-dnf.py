@@ -91,6 +91,15 @@ class DnfManager:
         errata = pkg.get_advisories(hawkey.EQ)
         return errata[0].id
 
+    def last_update(self):
+        last_ts = 0
+        for repo in self.base.repos.iter_enabled():
+            repo_ts = repo._repo.getTimestamp()
+            if repo_ts > last_ts:
+                last_ts = repo_ts
+        return last_ts
+
+
 class YumManager:
     def __init__(self):
         self.base = yum.YumBase()
@@ -153,6 +162,10 @@ class YumManager:
             return adv.get_metadata()['update_id']
         return None
 
+    @staticmethod
+    def last_update():
+        return 0
+
 
 #------- main ------------
 try:
@@ -208,6 +221,9 @@ with UpdatesManager() as umgr:
                                 out_list.append(pkg_dict)
                             response["update_list"][nevra] = {"available_updates": out_list}
 
+            ts = umgr.last_update()
+            if ts:
+                response["metadata_time"] = time.strftime("%FT%TZ", time.gmtime(ts))
             print(json.dumps(response))
             if DEBUG:
                 print("Memory usage: %s MB" % (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024))
