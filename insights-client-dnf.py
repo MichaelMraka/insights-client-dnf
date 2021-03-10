@@ -89,7 +89,7 @@ class DnfManager:
     @staticmethod
     def advisory(pkg):
         errata = pkg.get_advisories(hawkey.EQ)
-        return errata[0].id
+        return errata[0].id if len(errata) > 0 else None
 
     def last_update(self):
         last_ts = 0
