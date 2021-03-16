@@ -108,6 +108,7 @@ class YumManager:
         self.basearch = self.base.conf.yumvar['basearch']
         self.packages = []
         self.repos = []
+        self.updict = {}
 
     def __enter__(self):
         return self
@@ -132,6 +133,12 @@ class YumManager:
         self.base.doSackSetup()
         self.packages = self.base.pkgSack.returnPackages()
         self.repos = self.base.repos.repos
+        self._build_updict()
+
+    def _build_updict(self):
+        self.updict = {}
+        for pkg in self.packages:
+            self.updict.setdefault(pkg.na, []).append(pkg)
 
     def enabled_repos(self):
         return [repo.id for repo in self.base.repos.listEnabled()]
@@ -142,7 +149,7 @@ class YumManager:
     def updates(self, pkg):
         nevra = pkg.nevra
         updates_list = []
-        for upg in self.base.pkgSack.returnPackages(patterns=[pkg.na]):
+        for upg in self.updict[pkg.na]:
             if upg.verGT(pkg):
                 updates_list.append(upg)
         return nevra, updates_list
